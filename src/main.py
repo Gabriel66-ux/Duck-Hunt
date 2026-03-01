@@ -115,6 +115,7 @@ class DuckHuntGame(GameBase):
         self.mi_mira = None 
 
     def start(self, surface: pygame.Surface) -> None:
+        super().start(surface)
         self.mi_mira = Mira(self.ASSETS_DIR)
         try:
             # Intentamos cargar cada cosa por separado para ver cuál falla
