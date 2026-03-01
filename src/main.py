@@ -4,7 +4,7 @@ from pathlib import Path
 from arcade_machine_sdk import GameBase, GameMeta, BASE_WIDTH, BASE_HEIGHT
 
 # ==========================================================
-# 1. CLASE MIRA (Originalmente mause.py)
+# 1. CLASE MIRA
 # ==========================================================
 class Mira(pygame.sprite.Sprite):
     def __init__(self, assets_dir: Path):
@@ -13,10 +13,12 @@ class Mira(pygame.sprite.Sprite):
         try:
             self.image = pygame.image.load(str(ruta_imagen)).convert_alpha()
             self.image = pygame.transform.scale(self.image, (45, 45)) 
-        except Exception as e:
-            print(f"⚠️ Usando mira de emergencia: {e}")
+        except Exception:
+            # Mira de emergencia si no hay imagen
             self.image = pygame.Surface((30, 30), pygame.SRCALPHA)
             pygame.draw.circle(self.image, (255, 0, 0), (15, 15), 15, 2)
+            pygame.draw.line(self.image, (255, 0, 0), (15, 0), (15, 30), 2)
+            pygame.draw.line(self.image, (255, 0, 0), (0, 15), (30, 15), 2)
 
         self.rect = self.image.get_rect()
         pygame.mouse.set_visible(False)
@@ -28,7 +30,7 @@ class Mira(pygame.sprite.Sprite):
         superficie.blit(self.image, self.rect)
 
 # ==========================================================
-# 2. CLASES DE PATOS (Originalmente Movimiento_de_los_patos.py)
+# 2. CLASES DE PATOS
 # ==========================================================
 class PatoBase:
     def __init__(self, x, y, carpeta_relativa, vel_x, vel_y, assets_dir: Path):
@@ -43,7 +45,7 @@ class PatoBase:
             self.image = self.frames_actuales[self.index_frame]
         else:
             self.image = pygame.Surface((64, 64))
-            self.image.fill((255, 0, 255)) # Rosa si falta imagen
+            self.image.fill((255, 0, 255))
         
         self.rect = self.image.get_rect(center=(x, y))
         self.vel_x = vel_x
@@ -56,8 +58,10 @@ class PatoBase:
         if ruta.exists():
             archivos = sorted([f for f in ruta.iterdir() if f.suffix.lower() in ['.png', '.jpg']])
             for arch in archivos:
-                img = pygame.image.load(str(arch)).convert_alpha()
-                lista.append(pygame.transform.scale(img, (64, 64)))
+                try:
+                    img = pygame.image.load(str(arch)).convert_alpha()
+                    lista.append(pygame.transform.scale(img, (64, 64)))
+                except: continue
         return lista
 
     def recibir_disparo(self):
@@ -95,6 +99,7 @@ class Pato_3(PatoBase):
 # ==========================================================
 class DuckHuntGame(GameBase):
     def __init__(self, metadata: GameMeta):
+        # 1. Configuración inicial de datos
         super().__init__(metadata)
         self.BASE_DIR = Path(__file__).resolve().parent
         self.ASSETS_DIR = self.BASE_DIR / "sprites"
@@ -108,43 +113,45 @@ class DuckHuntGame(GameBase):
         self.ultimo_pato_tiempo = 0
         self.espera_entre_patos = 2000
         
-        self.fuente_pixel = self.fuente_grande = None
-        self.imagen_bala = self.fondo = None
+        # Inicializamos los objetos en None
+        self.fuente_pixel = None
+        self.fuente_grande = None
+        self.imagen_bala = None
+        self.fondo = None
         self.mis_patos = []
         self.tipos_de_patos = [Pato_1, Pato_2, Pato_3]
         self.mi_mira = None 
 
     def start(self, surface: pygame.Surface) -> None:
+        # 2. Carga de recursos (Se ejecuta una sola vez al inicio)
+        super().start(surface) 
+        pygame.font.init() # <-- IMPORTANTE: Inicializa fuentes aquí
+        
         self.mi_mira = Mira(self.ASSETS_DIR)
+        
+        # Carga de fuentes después de inicializar
+        self.fuente_pixel = pygame.font.SysFont("Arial", 24, bold=True)
+        self.fuente_grande = pygame.font.SysFont("Arial", 50, bold=True)
+
         try:
-            # Intentamos cargar cada cosa por separado para ver cuál falla
-            #ruta_f = self.ASSETS_DIR / "PressStart2P-Regular.ttf"
-            #if not ruta_f.exists(): print(f"❌ No existe la fuente en: {ruta_f}")
-            #self.fuente_pixel = pygame.font.Font(str(ruta_f), 20)
-            #self.fuente_grande = pygame.font.Font(str(ruta_f), 40)
-            
-            ruta_bala = self.ASSETS_DIR / "Municion.png"
-            if not ruta_bala.exists(): print(f"❌ No existe la imagen: {ruta_bala}")
-            self.imagen_bala = pygame.transform.scale(pygame.image.load(str(ruta_bala)), (25, 40))
-            
-            ruta_fondo = self.ASSETS_DIR / "nuevo.png"
-            if not ruta_fondo.exists(): print(f"❌ No existe el fondo en: {ruta_fondo}")
-            self.fondo = pygame.transform.scale(pygame.image.load(str(ruta_fondo)), (BASE_WIDTH, BASE_HEIGHT))
-            
-            print("✅ ¡Recursos cargados con éxito!")
+            # Carga de imágenes
+            self.imagen_bala = pygame.transform.scale(pygame.image.load(str(self.ASSETS_DIR / "Municion.png")), (25, 40))
+            self.fondo = pygame.transform.scale(pygame.image.load(str(self.ASSETS_DIR / "nuevo.png")), (BASE_WIDTH, BASE_HEIGHT))
+            print("✅ Recursos cargados.")
         except Exception as e:
-            print(f"⚠️ Error detallado: {e}")
+            print(f"⚠️ Error cargando imágenes: {e}")
             
     def handle_events(self, events: list[pygame.event.Event]) -> None:
+        # 3. Entrada del usuario
         for event in events:
             if not self.mostrar_anuncio_ronda and event.type == pygame.MOUSEBUTTONDOWN:
                 if self.balas_actuales > 0:
                     self.balas_actuales -= 1
+                    # Lógica de disparo...
                     for pato in self.mis_patos:
                         if pato.vivo and pato.rect.collidepoint(event.pos):
                             pato.recibir_disparo()
                             self.aciertos += 1
-                            if self.balas_actuales < self.balas_maximas: self.balas_actuales += 1
                             if self.aciertos % 10 == 0:
                                 self.ronda_actual += 1
                                 self.mostrar_anuncio_ronda = True
@@ -153,55 +160,68 @@ class DuckHuntGame(GameBase):
                             break
 
     def update(self, dt: float) -> None:
+        # 4. Lógica de juego constante
         t = pygame.time.get_ticks()
+        
         if self.mostrar_anuncio_ronda:
-            if t - self.tiempo_anuncio > 2000: self.mostrar_anuncio_ronda = False
+            if t - self.tiempo_anuncio > 2000: 
+                self.mostrar_anuncio_ronda = False
+                self.balas_actuales = self.balas_maximas
             return
 
+        # Aparición de patos
         if t - self.ultimo_pato_tiempo > self.espera_entre_patos:
             clase = random.choice(self.tipos_de_patos)
             self.mis_patos.append(clase(random.randint(100, BASE_WIDTH-100), int(BASE_HEIGHT*0.6), self.ASSETS_DIR))
             self.ultimo_pato_tiempo = t
 
+        # Update de entidades
         for pato in self.mis_patos[:]:
             pato.update()
-            if not pato.vivo and pato.rect.top > BASE_HEIGHT: self.mis_patos.remove(pato)
+            if not pato.vivo and pato.rect.top > BASE_HEIGHT: 
+                self.mis_patos.remove(pato)
         
         if self.mi_mira: self.mi_mira.update()
 
-    def render(self, surface: pygame.Surface) -> None:
-        if self.fondo: surface.blit(self.fondo, (0, 0))
-        
+    def render(self) -> None:
+        # 5. Dibujo (Se ejecuta muchas veces por segundo)
+        # Usamos self.surface (propiedad del SDK)
+        if self.fondo: self.surface.blit(self.fondo, (0, 0))
+        else: self.surface.fill((100, 149, 237))
+
         if self.mostrar_anuncio_ronda:
-            if self.fuente_grande:
-                txt = self.fuente_grande.render(f"ROUND {self.ronda_actual}", False, (255, 255, 255))
-                surface.blit(txt, txt.get_rect(center=(BASE_WIDTH//2, BASE_HEIGHT//2)))
+            txt = self.fuente_grande.render(f"ROUND {self.ronda_actual}", True, (255, 255, 255))
+            self.surface.blit(txt, txt.get_rect(center=(BASE_WIDTH//2, BASE_HEIGHT//2)))
             return 
 
-        for pato in self.mis_patos: surface.blit(pato.image, pato.rect)
-        self._dibujar_ui(surface)
-        if self.mi_mira: self.mi_mira.dibujar(surface)
+        for pato in self.mis_patos: 
+            self.surface.blit(pato.image, pato.rect)
+            
+        self._dibujar_ui(self.surface) # Llamada a función auxiliar
+        if self.mi_mira: 
+            self.mi_mira.dibujar(self.surface)
 
     def _dibujar_ui(self, surface: pygame.Surface):
-        if self.fuente_pixel:
-            t_ac = self.fuente_pixel.render(f"PUNTOS: {self.aciertos}", False, (255, 255, 255))
-            surface.blit(t_ac, (BASE_WIDTH - 320, BASE_HEIGHT - 90))
+        # 6. Función auxiliar de dibujo
+        t_ac = self.fuente_pixel.render(f"PUNTOS: {self.aciertos}", True, (255, 255, 255))
+        surface.blit(t_ac, (BASE_WIDTH - 250, BASE_HEIGHT - 60))
+        
+        # Balas
         if self.imagen_bala:
             for i in range(self.balas_actuales):
-                surface.blit(self.imagen_bala, (40 + (i * 35), BASE_HEIGHT - 90))
+                surface.blit(self.imagen_bala, (40 + (i * 35), BASE_HEIGHT - 60))
+        else:
+            t_balas = self.fuente_pixel.render(f"BALAS: {self.balas_actuales}", True, (255, 255, 255))
+            surface.blit(t_balas, (40, BASE_HEIGHT - 60))
 
 if __name__ == "__main__":
-    # Configuramos los metadatos completos
     meta = (GameMeta()
             .with_title("Duck Hunt Remake")
-            .with_description("Derriba a todos los patos antes de que escapen de la pantalla") # <--- OBLIGATORIO
+            .with_description("Derriba a los patos")
             .with_release_date("01/03/2026")
             .with_authors(["Gabriel", "Milagros"])
             .add_tag("Arcade")
             .with_group_number(2))
     
-    # Creamos la instancia
     game = DuckHuntGame(meta)
-    
-    # IMPORTANTE: run_independently() es lo que abre la ventana de Pygame
     game.run_independently()
