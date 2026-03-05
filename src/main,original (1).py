@@ -7,72 +7,100 @@ from arcade_machine_sdk import GameBase, GameMeta, BASE_WIDTH, BASE_HEIGHT
 #MI MENU QUE ME TIENE CRAZY
 #==========================================================
 class MenuPrincipal:
-    def __init__(self):
-        # Definición de colores
+    def __init__(self, base_width, base_height):
+        self.BASE_WIDTH = base_width
+        self.BASE_HEIGHT = base_height
+        
+        # Definición de colores estilo Retro/Arcade
         self.NEGRO = (0, 0, 0)
         self.CIAN = (0, 255, 255)
         self.BLANCO = (255, 255, 255)
         self.VERDE_RETRO = (163, 232, 112)
         
-        # Inicialización de fuentes
+        # Inicialización de fuentes (se cargan en el primer dibujo)
         self.fuente_logo = None
         self.fuente_boton = None
         self.fuente_rec = None
         
-        # Configuración del botón de inicio
-        self.rect_boton = pygame.Rect(0, 0, 320, 70)
-        self.rect_boton.center = (BASE_WIDTH // 2, BASE_HEIGHT // 2 + 30) # Subí este un poco
+        # --- CONFIGURACIÓN DE BOTONES ---
+        ancho_btn, alto_btn = 340, 65
+        
+        # Botón JUGAR
+        self.rect_boton = pygame.Rect(0, 0, ancho_btn, alto_btn)
+        self.rect_boton.center = (self.BASE_WIDTH // 2, self.BASE_HEIGHT // 2 - 10)
         self.mouse_encima = False
 
-        # --- NUEVO: Configuración botón REGLAS ---
-        self.rect_reglas = pygame.Rect(0, 0, 320, 70)
-        self.rect_reglas.center = (BASE_WIDTH // 2, BASE_HEIGHT // 2 + 120)
+        # Botón REGLAS
+        self.rect_reglas = pygame.Rect(0, 0, ancho_btn, alto_btn)
+        self.rect_reglas.center = (self.BASE_WIDTH // 2, self.BASE_HEIGHT // 2 + 80)
         self.mouse_en_reglas = False
 
+        # Botón SALIR (Para volver al lanzador del Arcade)
+        self.rect_salir = pygame.Rect(0, 0, ancho_btn, alto_btn)
+        self.rect_salir.center = (self.BASE_WIDTH // 2, self.BASE_HEIGHT // 2 + 170)
+        self.mouse_en_salir = False
+
     def manejar_eventos(self, eventos: list[pygame.event.Event]):
-        """Ahora retorna un string indicando la acción"""
+        """Detecta interacción y retorna la acción para el controlador principal"""
         pos_mouse = pygame.mouse.get_pos()
+        
+        # Actualizar estados visuales (hover)
         self.mouse_encima = self.rect_boton.collidepoint(pos_mouse)
         self.mouse_en_reglas = self.rect_reglas.collidepoint(pos_mouse)
+        self.mouse_en_salir = self.rect_salir.collidepoint(pos_mouse)
         
         for event in eventos:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     return "JUGAR"
+                if event.key == pygame.K_ESCAPE:
+                    return "SALIR_ARCADE"
+
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.mouse_encima:
                     return "JUGAR"
                 if self.mouse_en_reglas:
                     return "REGLAS"
+                if self.mouse_en_salir:
+                    # Esta señal indica al main que debe cerrar este juego 
+                    # y volver al menú del arcade global.
+                    return "SALIR_ARCADE"
         return None
 
     def dibujar(self, surface: pygame.Surface, records_list: list):
+        # Carga perezosa de fuentes
         if self.fuente_logo is None:
-            self.fuente_logo = pygame.font.SysFont("Courier New", 80, bold=True)
-            self.fuente_boton = pygame.font.SysFont("Courier New", 35, bold=True)
-            self.fuente_rec = pygame.font.SysFont("Courier New", 28, bold=True)
+            self.fuente_logo = pygame.font.SysFont("Courier New", 85, bold=True)
+            self.fuente_boton = pygame.font.SysFont("Courier New", 32, bold=True)
+            self.fuente_rec = pygame.font.SysFont("Courier New", 26, bold=True)
         
         surface.fill(self.NEGRO)
         
-        # Título
+        # --- TÍTULO ---
         txt_duck = self.fuente_logo.render("DUCK", True, self.CIAN)
         txt_hunt = self.fuente_logo.render("HUNT", True, self.CIAN)
-        surface.blit(txt_duck, txt_duck.get_rect(center=(BASE_WIDTH // 2, 140)))
-        surface.blit(txt_hunt, txt_hunt.get_rect(center=(BASE_WIDTH // 2, 220)))
+        surface.blit(txt_duck, txt_duck.get_rect(center=(self.BASE_WIDTH // 2, 120)))
+        surface.blit(txt_hunt, txt_hunt.get_rect(center=(self.BASE_WIDTH // 2, 200)))
         
-        # Botón Jugar
-        color_btn = self.BLANCO if self.mouse_encima else self.CIAN
-        pygame.draw.rect(surface, color_btn, self.rect_boton, 3)
-        txt_btn = self.fuente_boton.render(">>> JUGAR <<<", True, color_btn)
-        surface.blit(txt_btn, txt_btn.get_rect(center=self.rect_boton.center))
+        # --- BOTÓN: JUGAR ---
+        col_jugar = self.BLANCO if self.mouse_encima else self.CIAN
+        pygame.draw.rect(surface, col_jugar, self.rect_boton, 3)
+        txt_jugar = self.fuente_boton.render(">>> JUGAR <<<", True, col_jugar)
+        surface.blit(txt_jugar, txt_jugar.get_rect(center=self.rect_boton.center))
 
-        # --- NUEVO: Dibujar botón REGLAS ---
-        color_reg = self.BLANCO if self.mouse_en_reglas else self.CIAN
-        pygame.draw.rect(surface, color_reg, self.rect_reglas, 3)
-        txt_reg = self.fuente_boton.render("REGLAS", True, color_reg)
-        surface.blit(txt_reg, txt_reg.get_rect(center=self.rect_reglas.center))
+        # --- BOTÓN: REGLAS ---
+        col_reglas = self.BLANCO if self.mouse_en_reglas else self.CIAN
+        pygame.draw.rect(surface, col_reglas, self.rect_reglas, 3)
+        txt_reglas = self.fuente_boton.render("REGLAS", True, col_reglas)
+        surface.blit(txt_reglas, txt_reglas.get_rect(center=self.rect_reglas.center))
         
-        # --- SECCIÓN DE RÉCORD MÁXIMO ---
+        # --- BOTÓN: SALIR AL MENÚ ---
+        col_salir = self.BLANCO if self.mouse_en_salir else self.CIAN
+        pygame.draw.rect(surface, col_salir, self.rect_salir, 3)
+        txt_salir = self.fuente_boton.render("SALIR AL MENÚ", True, col_salir)
+        surface.blit(txt_salir, txt_salir.get_rect(center=self.rect_salir.center))
+        
+        # --- SECCIÓN DE RÉCORD MÁXIMO (TOP 1) ---
         if records_list and len(records_list) > 0:
             top_nombre = records_list[0]['nombre'].upper()
             top_puntos = records_list[0]['puntos']
@@ -81,7 +109,8 @@ class MenuPrincipal:
             texto_highscore = "TOP SCORE: --- 000000"
 
         txt_rec = self.fuente_rec.render(texto_highscore, True, self.VERDE_RETRO)
-        surface.blit(txt_rec, txt_rec.get_rect(center=(BASE_WIDTH // 2, BASE_HEIGHT - 60))) # Bajé este a 60
+        surface.blit(txt_rec, txt_rec.get_rect(center=(self.BASE_WIDTH // 2, self.BASE_HEIGHT - 50)))
+
 
 #==========================================================
 #MI JUEGO MIS REGLAS
@@ -596,12 +625,16 @@ class Perro(pygame.sprite.Sprite):
 
 # ... (Clases Mira y Patos se mantienen igual, asegúrate de que las rutas existan) ...
 
+import sys
+
 class DuckHuntGame(GameBase):
     def __init__(self, metadata: GameMeta):
         super().__init__(metadata)
         self.BASE_DIR = Path(__file__).resolve().parent
         self.ASSETS_DIR = self.BASE_DIR / "sprites"
+        self.SOUNDS_DIR = self.BASE_DIR.parent.parent / "sonidos"
         
+        # Variables de juego
         self.balas_maximas = 3
         self.balas_actuales = 3
         self.aciertos = 0
@@ -611,14 +644,19 @@ class DuckHuntGame(GameBase):
         self.patos_derribados_ronda = 0
         self.patos_generados_ronda = 0
         self.max_patos_por_ronda = 10
-        self.estados_patos_ronda = [] # Lista de booleanos: True=derribado, False=escapado
+        self.estados_patos_ronda = [] 
         self.mensaje_pato_escapado = False
         self.tiempo_mensaje_escape = 0
         
-        # Inicialización de objetos
+        # Gatillos para la clase Juego (Sonidos y Eventos)
+        self.pato_toco_suelo = False
+        self.disparo_realizado = False 
+        self.ladrido_realizado = False
+        self.ladrido_solicitado = False 
+
+        # Objetos
         self.fuente_pixel = None
         self.fuente_grande = None
-        self.imagen_bala = None
         self.fondo = None
         self.mis_patos = []
         self.tipos_de_patos = [Pato_1, Pato_2, Pato_3, Pato_4, Pato_5, Pato_6]
@@ -627,33 +665,35 @@ class DuckHuntGame(GameBase):
 
     def start(self, surface: pygame.Surface) -> None:
         super().start(surface) 
-        
-        # REINICIO TOTAL DE VARIABLES
+        # REINICIO TOTAL
         self.balas_actuales = self.balas_maximas
         self.aciertos = 0
         self.ronda_actual = 1
         self.patos_generados_ronda = 0
+        self.patos_derribados_ronda = 0
         self.estados_patos_ronda = []
-        self.mis_patos = [] # Vaciar la lista de patos viejos
+        self.mis_patos = [] 
+        
+        # Gatillos
+        self.pato_toco_suelo = False
+        self.disparo_realizado = False
+        self.ladrido_realizado = False
+        self.ladrido_solicitado = False
+        
         self.mi_mira = Mira(self.ASSETS_DIR)
-        self.tiempo_anuncio = pygame.time.get_ticks() # Reset al empezar
+        self.tiempo_anuncio = pygame.time.get_ticks() 
         self.perro = Perro(self.ASSETS_DIR)
-        self.perro.iniciar_intro() # Lanzamos la animación
+        self.perro.iniciar_intro() 
         
         self.fuente_pixel = pygame.font.SysFont("Consolas", 24, bold=True)
         self.fuente_grande = pygame.font.SysFont("Consolas", 50, bold=True)
 
         try:
-            # IMPORTANTE: Verifica que los nombres de archivos coincidan exactamente (Mayúsculas/Minúsculas)
             self.fondo = pygame.image.load(str(self.ASSETS_DIR / "nuevo.png")).convert()
             self.fondo = pygame.transform.scale(self.fondo, (BASE_WIDTH, BASE_HEIGHT))
             
-            ruta_arbusto = self.ASSETS_DIR / "arbusto.png"
-            if ruta_arbusto.exists():
-                self.imagen_arbusto = pygame.image.load(str(ruta_arbusto)).convert_alpha()
-                self.imagen_arbusto = pygame.transform.scale(self.imagen_arbusto, (BASE_WIDTH, 120))
-            else:
-                print("⚠️ El archivo arbustos.png no existe en la carpeta sprites")
+            self.imagen_arbusto = pygame.image.load(str(self.ASSETS_DIR / "arbusto.png")).convert_alpha()
+            self.imagen_arbusto = pygame.transform.scale(self.imagen_arbusto, (BASE_WIDTH, 120))
             
             self.imagen_bala = pygame.image.load(str(self.ASSETS_DIR / "Municion.png")).convert_alpha()
             self.imagen_bala = pygame.transform.scale(self.imagen_bala, (25, 40))
@@ -663,20 +703,19 @@ class DuckHuntGame(GameBase):
             
             self.imagen_hit_llena = pygame.image.load(str(self.ASSETS_DIR / "hit_lleno.png")).convert_alpha()
             self.imagen_hit_llena = pygame.transform.scale(self.imagen_hit_llena, (25, 25))
-            print("✅ Recursos cargados correctamente.")
         except Exception as e:
-            print(f"⚠️ Error cargando imágenes: {e}. Se usará fondo de color.")
+            print(f"⚠️ Error cargando recursos: {e}")
 
     def handle_events(self, events: list[pygame.event.Event]) -> None:
         for event in events:
+            # Bloquear interacción durante anuncios o intro del perro
             if self.mostrar_anuncio_ronda or (self.perro.activo and self.perro.estado == "inicio"):
                 continue
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.balas_actuales > 0:
                     self.balas_actuales -= 1
-                    disparo_acertado = False
-                    # Posición del mouse ajustada
+                    self.disparo_realizado = True # Activa sonido en clase Juego
                     pos_mouse = event.pos
 
                     for pato in self.mis_patos:
@@ -684,22 +723,24 @@ class DuckHuntGame(GameBase):
                             pato.recibir_disparo()
                             self.aciertos += pato.puntos
                             self.patos_derribados_ronda += 1
-                            disparo_acertado = True
+                            # Lógica de la primera clase: Recuperar bala al acertar
                             if self.balas_actuales < self.balas_maximas:
                                 self.balas_actuales += 1
                             break 
 
     def update(self, dt: float) -> None:
         t = pygame.time.get_ticks()
-        
-        # 1. ACTUALIZAR SIEMPRE AL PERRO
         self.perro.update()
+        self.pato_toco_suelo = False
         
-        # 2. BLOQUEAR SPAWN DE PATOS SI EL PERRO ESTÁ EN INTRO
+        # Lógica de Intro del Perro y Sonido de Ladrido
         if self.perro.activo and self.perro.estado == "inicio":
-            return # Aquí sí cortamos, porque no queremos patos mientras camina
+            if self.perro.rect.x >= 250 and not self.ladrido_realizado:
+                self.ladrido_solicitado = True # Gatillo para sonido
+                self.ladrido_realizado = True
+            return 
         
-        
+        # Gestión de anuncios de Ronda
         if self.mostrar_anuncio_ronda:
             if t - self.tiempo_anuncio > 2000: 
                 if self.ronda_actual > 5: return
@@ -710,26 +751,26 @@ class DuckHuntGame(GameBase):
                 self.estados_patos_ronda = []
             return
         
-        # Quitar el mensaje de escape después de 1 segundo
         if self.mensaje_pato_escapado and t - self.tiempo_mensaje_escape > 1000:
             self.mensaje_pato_escapado = False
-        
-        # SI EL PERRO ESTÁ HACIENDO LA INTRO, NO HACEMOS NADA MÁS
-        if self.perro.activo and self.perro.estado == "inicio":
-            return
 
-        # 3. CONDICIÓN PARA NUEVO PATO (Sincronizada con el perro)
-        # Solo generamos si: no hay patos, no terminó la ronda Y EL PERRO NO ESTÁ EN PANTALLA
+        # Lógica de escape por falta de munición
+        if self.balas_actuales <= 0 and self.mis_patos:
+            for pato in self.mis_patos:
+                if pato.vivo:
+                    pato.vel_y = -15 
+                    if not self.perro.activo:
+                        self.perro.aparecer("risa", BASE_WIDTH // 2)
+
+        # Generación de Patos (Sincronizada con el Perro)
         if not self.mis_patos and self.patos_generados_ronda < self.max_patos_por_ronda:
-            if not self.perro.activo: # <-- ESTA ES LA CLAVE
+            if not self.perro.activo and self.balas_actuales > 0:
                 dificultad = 1.0 + (self.ronda_actual - 1) * 0.2
                 clase = random.choice(self.tipos_de_patos)
-                y_aparicion = int(BASE_HEIGHT * 0.75) 
-                nuevo_pato = clase(random.randint(100, BASE_WIDTH-100), y_aparicion, self.ASSETS_DIR, dificultad)
+                nuevo_pato = clase(random.randint(100, BASE_WIDTH-100), int(BASE_HEIGHT * 0.75), self.ASSETS_DIR, dificultad)
                 nuevo_pato.tiempo_nacimiento = t 
                 self.mis_patos.append(nuevo_pato)
                 self.patos_generados_ronda += 1
-                
 
         # Cambio de ronda
         if self.patos_generados_ronda >= self.max_patos_por_ronda and not self.mis_patos:
@@ -737,158 +778,152 @@ class DuckHuntGame(GameBase):
             self.mostrar_anuncio_ronda = True
             self.tiempo_anuncio = t
 
+        # Actualización de Patos y Colisiones con Escenario
         for pato in self.mis_patos[:]:
             pato.update()
-            # Escapar si pasa el tiempo (empieza a subir)
+            
+            # Escape por tiempo (Lógica de la primera clase)
             if pato.vivo and (t - pato.tiempo_nacimiento > 5000):
                 pato.vel_x = 0
                 pato.vel_y = -10 
 
-            # ELIMINACIÓN 1: Si escapó por el techo
+            # Eliminación: El pato escapó por el techo
             if pato.rect.bottom < 0:
                 if not self.perro.activo:
                     self.perro.aparecer("risa", pato.rect.centerx)
-                
                 self.estados_patos_ronda.append(False)
                 self.mensaje_pato_escapado = True
                 self.tiempo_mensaje_escape = t
                 self.mis_patos.remove(pato)
             
-        
-            # ELIMINACIÓN 2: Si cayó muerto al suelo
+            # Eliminación: El pato cayó al suelo
             elif not pato.vivo and not pato.estacionario:
                 if pato.rect.centery >= int(BASE_HEIGHT * 0.75):
                     if not self.perro.activo:
                         self.perro.aparecer("captura", pato.rect.centerx)
-                    
+                        self.pato_toco_suelo = True # Gatillo para sonido "Perfect"
                     self.estados_patos_ronda.append(True) 
-                    self.mis_patos.remove(pato) # Solo una vez
-        
-        # Actualizar al perro
-        self.perro.update()
+                    self.mis_patos.remove(pato) 
         
         if self.mi_mira: 
             self.mi_mira.update()
-            
-        if self.balas_actuales == 0 and not self.perro.activo and self.mis_patos:
-            # Solo si el pato sigue volando y no tienes munición
-            pato_actual = self.mis_patos[0]
-            if pato_actual.vivo:
-                pato_actual.vel_y = -15 # El pato huye rápido
-                if not self.perro.activo:
-                    self.perro.aparecer("risa", BASE_WIDTH // 2)    
 
     def render(self) -> None:
-        # 1. Dibujar fondo
         if self.fondo: 
             self.surface.blit(self.fondo, (0, 0))
-        else: 
-            self.surface.fill((100, 149, 237))
-
-        # 2. Dibujar Patos
+        
+        # Patos
         if not self.mostrar_anuncio_ronda:
             for pato in self.mis_patos: 
                 self.surface.blit(pato.image, pato.rect)
-
-        # 3. Dibujar Perro (SOLO si NO es la INTRO)
-        # Aquí se dibuja cuando sale a reírse o por capturas, quedando detrás del arbusto
+        
+        # Perro detrás del arbusto (Risa/Captura)
         if self.perro.activo and self.perro.estado != "inicio":
             self.surface.blit(self.perro.image, self.perro.rect)
-
-        # 4. Dibujar el Arbusto (Capa de Primer Plano)
-        if self.imagen_arbusto:
-            y_pos_arbusto = int(BASE_HEIGHT * 0.75) - 90 
-            self.surface.blit(self.imagen_arbusto, (0, y_pos_arbusto))
-
-        # 5. Dibujar Perro (SOLO si es la INTRO/CAMINATA)
-        # Al dibujarlo DESPUÉS del arbusto, aparecerá mágicamente por encima de él
+            
+        # Arbusto
+        if self.imagen_arbusto: 
+            self.surface.blit(self.imagen_arbusto, (0, int(BASE_HEIGHT * 0.75) - 90))
+            
+        # Perro delante del arbusto (Intro caminando)
         if self.perro.activo and self.perro.estado == "inicio":
             self.surface.blit(self.perro.image, self.perro.rect)
-
-        # 6. UI y Anuncios (Siempre al frente de todo)
+            
+        # UI: Anuncio de Ronda
         if self.mostrar_anuncio_ronda:
             txt = self.fuente_grande.render(f"ROUND {self.ronda_actual}", True, (255, 255, 255))
             self.surface.blit(txt, txt.get_rect(center=(BASE_WIDTH//2, BASE_HEIGHT//2)))
             
-            # Dibujar mensaje de "PATO ESCAPADO"
+        # UI: Fly Away
         if self.mensaje_pato_escapado:
             txt_esc = self.fuente_grande.render("FLY AWAY!", True, (255, 255, 255))
             self.surface.blit(txt_esc, txt_esc.get_rect(center=(BASE_WIDTH//2, 150)))
             
         self._dibujar_ui(self.surface)
         
-        if self.mi_mira: 
-            if not self.mostrar_anuncio_ronda and not (self.perro.activo and self.perro.estado == "inicio"):
-                self.mi_mira.dibujar(self.surface)
+        # Mira (solo si se puede jugar)
+        if self.mi_mira and not self.mostrar_anuncio_ronda and not (self.perro.activo and self.perro.estado == "inicio"):
+            self.mi_mira.dibujar(self.surface)
 
     def _dibujar_ui(self, surface: pygame.Surface):
-        
-        # Renderizamos el texto de la ronda actual
+        # Ronda
         t_ronda_num = self.fuente_pixel.render(f"R = {self.ronda_actual}", True, (0, 255, 0))
         surface.blit(t_ronda_num, (100, BASE_HEIGHT - 152))
         
-        # Puntos
+        # Score
         t_ac = self.fuente_pixel.render(f"SCORE: {self.aciertos}", True, (255, 255, 255))
         surface.blit(t_ac, (BASE_WIDTH - 250, BASE_HEIGHT - 90))
         
-        # Balas
+        # Munición
         for i in range(self.balas_actuales):
-            if self.imagen_bala:
+            if self.imagen_bala: 
                 surface.blit(self.imagen_bala, (90 + (i * 35), BASE_HEIGHT - 105))
         
-        # Texto "SHOT" justo debajo de las balas
-        t_shot = self.fuente_pixel.render("SHOT", True, (0, 255, 255)) # Color cian para que resalte
+        t_shot = self.fuente_pixel.render("SHOT", True, (0, 255, 255))
         surface.blit(t_shot, (114, BASE_HEIGHT - 70))        
-                
-        #Texto hit
+        
+        # Marcador de HITS (Barra inferior central)
         t_hit = self.fuente_pixel.render("HITS:", True, (0, 255, 0))
         surface.blit(t_hit, (BASE_WIDTH // 2 - 240, BASE_HEIGHT - 90))        
         
-        # HIT Icons dinámicos
         for i in range(10):
             x_pos = (BASE_WIDTH // 2 - 160) + (i * 32)
             y_pos = BASE_HEIGHT - 90
-            
-            # Si el pato ya pasó (está en la lista)
             if i < len(self.estados_patos_ronda):
-                if self.estados_patos_ronda[i]: # Fue derribado
-                    surface.blit(self.imagen_hit_llena, (x_pos, y_pos))
-                else: # Se escapó (Icono vacío o podrías usar uno rojo de 'fail')
-                    # Aquí simplemente no dibujamos el lleno, queda el vacío de abajo
-                    surface.blit(self.imagen_hit_vacia, (x_pos, y_pos))
-                    # Opcional: dibujar una X roja pequeña encima
-            else:
-                # Patos que aún no salen
+                # Si el estado es True (derribado) dibujamos lleno, si es False (escapado) vacío
+                surface.blit(self.imagen_hit_llena if self.estados_patos_ronda[i] else self.imagen_hit_vacia, (x_pos, y_pos))
+            else: 
                 surface.blit(self.imagen_hit_vacia, (x_pos, y_pos))
-                
-# Asumiendo que tus otras clases (MenuPrincipal, etc.) están importadas o definidas arriba
-# ...
 
+
+                
 class Juego(GameBase):
     def __init__(self, metadata: GameMeta):
-        # Pasamos la metadata al constructor padre (GameBase)
+        # 1. Configuración de audio optimizada para MP3
+        pygame.mixer.pre_init(44100, -16, 2, 512) 
         pygame.init()
         pygame.font.init()
+        pygame.mixer.init()
+        
         super().__init__(metadata)
         
-        # 1. Instanciamos el motor del juego de patos
-        # Le pasamos la misma metadata o una personalizada
-        self.duck_hunt = DuckHuntGame(metadata)
+        # Rutas de recursos
+        self.SOUNDS_DIR = Path(__file__).resolve().parent.parent / "sonidos"
         
-        # 2. Instanciamos las pantallas de interfaz
-        self.menu = MenuPrincipal()
+        # Instancias de componentes
+        self.duck_hunt = DuckHuntGame(metadata)
+        self.menu = MenuPrincipal(BASE_WIDTH, BASE_HEIGHT)
         self.pantalla_reglas = PantallaReglas()
         self.pantalla_gameover = PantallaGameOver()
         self.pantalla_victoria = PantallaVictoria()
         self.gestor_records = GestorRecords()
         
-        # Estado inicial
         self.estado = "MENU"
+        
+        # Música inicial
+        self._reproducir_musica_fondo("1 - Title.mp3", loop=True)
+
+    def _reproducir_musica_fondo(self, archivo: str, loop=False):
+        """Maneja la música de fondo o loops largos"""
+        try:
+            pygame.mixer.music.load(str(self.SOUNDS_DIR / archivo))
+            pygame.mixer.music.play(-1 if loop else 0)
+        except Exception as e:
+            print(f"⚠️ Error música: {e}")
+
+    def _reproducir_sfx(self, archivo: str):
+        """Maneja efectos de sonido inmediatos"""
+        try:
+            # Nota: Si usas mixer.music para SFX, detendrá la música de fondo.
+            # Se recomienda usar pygame.mixer.Sound para SFX, pero mantengo tu estructura:
+            pygame.mixer.music.load(str(self.SOUNDS_DIR / archivo))
+            pygame.mixer.music.play(0)
+        except Exception as e:
+            print(f"⚠️ Error SFX: {e}")
 
     def start(self, surface: pygame.Surface) -> None:
         """Se ejecuta una sola vez al iniciar el juego en el SDK."""
         super().start(surface)
-        # Aquí puedes inicializar cosas globales si fuera necesario
 
     def handle_events(self, events: list[pygame.event.Event]) -> None:
         """El SDK llama a este método para procesar eventos."""
@@ -896,10 +931,14 @@ class Juego(GameBase):
         if self.estado == "MENU":
             accion = self.menu.manejar_eventos(events)
             if accion == "JUGAR":
+                self._reproducir_sfx("3 - Clay Shooting Intro.mp3")
                 self.duck_hunt.start(self.surface) # Inicializa recursos del juego
                 self.estado = "JUGANDO"
             elif accion == "REGLAS":
                 self.estado = "REGLAS"
+            elif accion == "SALIR_ARCADE":
+                pygame.quit()
+                sys.exit()
 
         elif self.estado == "REGLAS":
             if self.pantalla_reglas.manejar_eventos(events):
@@ -907,6 +946,11 @@ class Juego(GameBase):
 
         elif self.estado == "JUGANDO":
             self.duck_hunt.handle_events(events)
+            
+            # --- DETECCIÓN DE SONIDO DE DISPARO ---
+            if getattr(self.duck_hunt, 'disparo_realizado', False):
+                self._reproducir_sfx("10 - SFX Gun Shot.mp3")
+                self.duck_hunt.disparo_realizado = False 
 
         elif self.estado == "VICTORIA":
             accion = self.pantalla_victoria.manejar_eventos(events)
@@ -917,34 +961,50 @@ class Juego(GameBase):
                 )
             elif accion == "MENU":
                 self.estado = "MENU"
+                self._reproducir_musica_fondo("1 - Title.mp3", loop=True)
                 self.pantalla_victoria.guardado = False
                 self.pantalla_victoria.nombre = ""
 
         elif self.estado == "GAMEOVER":
             if self.pantalla_gameover.manejar_eventos(events):
                 self.estado = "MENU"
+                self._reproducir_musica_fondo("1 - Title.mp3", loop=True)
 
     def update(self, dt: float) -> None:
         """El SDK llama a este método cada frame."""
-        t_actual = pygame.time.get_ticks()
-
         if self.estado == "JUGANDO":
-            self.duck_hunt.update(t_actual)
+            # Guardamos contador de patos para detectar nuevos spawns y sonar el Quack
+            patos_antes = self.duck_hunt.patos_generados_ronda
             
-            # Chequeo de condiciones de salida
+            self.duck_hunt.update(dt)
+            
+            # 1. Sonido de Quack al aparecer nuevo pato
+            if self.duck_hunt.patos_generados_ronda > patos_antes:
+                self._reproducir_sfx("13 - SFX Duck Quack.mp3")
+            
+            # 2. Sonido Perfect (Caída del pato al suelo detectada por la lógica)
+            if getattr(self.duck_hunt, 'pato_toco_suelo', False):
+                self._reproducir_sfx("6 - Perfect.mp3")
+                self.duck_hunt.pato_toco_suelo = False
+
+            # --- LÓGICA DE SALIDA (Conservando lógica de la Clase 1) ---
+            
+            # 3. Condición de Victoria (Ronda > 5)
             if self.duck_hunt.ronda_actual > 5:
-                pygame.key.start_text_input() # <--- ¡ACTIVA ESTO AQUÍ!
+                pygame.key.start_text_input() 
                 pygame.mouse.set_visible(True)
                 self.estado = "VICTORIA"
             
-            # Condición de Game Over
+            # 4. Condición de Game Over (Sin balas y sin patos en pantalla)
             if self.duck_hunt.balas_actuales <= 0 and not self.duck_hunt.mis_patos:
-                pygame.mouse.set_visible(True)
-                self.estado = "GAMEOVER"
+                # Verificamos que no haya animaciones pendientes del perro (lógica de Clase 2)
+                if not getattr(self.duck_hunt.perro, 'activo', False) and not getattr(self.duck_hunt, 'mostrar_anuncio_ronda', False):
+                    self._reproducir_sfx("8 - Game Over.mp3")
+                    pygame.mouse.set_visible(True)
+                    self.estado = "GAMEOVER"
 
     def render(self) -> None:
         """El SDK llama a este método para dibujar en pantalla."""
-        # Limpiamos la superficie
         self.surface.fill((0, 0, 0))
 
         if self.estado == "MENU":
@@ -962,7 +1022,7 @@ class Juego(GameBase):
         elif self.estado == "GAMEOVER":
             self.pantalla_gameover.dibujar(self.surface, self.duck_hunt.aciertos)
 
-   
+
 # Iniciamos el juego usando el método del SDK               
 if __name__ == "__main__":
     meta = (GameMeta()
